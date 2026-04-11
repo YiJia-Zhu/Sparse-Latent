@@ -16,7 +16,7 @@ EXPT_NAME="${EXPT_NAME:-selected_no_neg_fullrun_ddp}"
 SAVE_DIR="${SAVE_DIR:-$ROOT_DIR/ckpts_official_sparse}"
 LOGGING_DIR="${LOGGING_DIR:-$SAVE_DIR/logs}"
 MODEL_PATH="${MODEL_PATH:-$DEFAULT_BASE_MODEL}"
-RESTORE_PATH="${RESTORE_PATH:-$DEFAULT_CODI_CKPT}"
+# RESTORE_PATH="${RESTORE_PATH:-$DEFAULT_CODI_CKPT}"
 LOCAL_DATA_PATH="${LOCAL_DATA_PATH:-$DEFAULT_GSM8K_TRAIN}"
 SELECTOR_PATH="${SELECTOR_PATH:-$DEFAULT_SELECTOR_SUMMARY}"
 
@@ -63,8 +63,9 @@ torchrun \
   --exp_mode False \
   --exp_data_num 7473 \
   --print_loss True \
-  --restore_from "$RESTORE_PATH" \
   --local_data_path "$LOCAL_DATA_PATH" \
   --selective_align_path "$SELECTOR_PATH" \
   --selective_align_set selected_no_neg \
   --ddp_find_unused_parameters False
+
+  # --restore_from "$RESTORE_PATH" \
