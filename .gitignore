@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Notebooks / editors
+.ipynb_checkpoints/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environments
+.env
+.venv/
+venv/
+
+# Local caches and logs
+*.log
+*.out
+*.err
+*.tmp
+wandb/
+runs/
+
+# Local model and dataset assets
+huggingface_datasets/
+huggingface_models/
+
+# Generated experiment artifacts
+pilot_results/
+refine-logs/
+codi_local_sparse/ckpts_official_sparse/
+codi_local_sparse/logs/
+
+# OS files
+.DS_Store
+Thumbs.db

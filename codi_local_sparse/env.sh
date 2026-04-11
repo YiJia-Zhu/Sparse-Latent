@@ -1,0 +1,17 @@
+#!/bin/bash
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$ROOT_DIR/.." && pwd)"
+
+CONDA_ENV_NAME="${CONDA_ENV_NAME:-SIMCoT}"
+
+MODELS_DIR="${MODELS_DIR:-$REPO_ROOT/huggingface_models}"
+DATA_DIR="${DATA_DIR:-$REPO_ROOT/huggingface_datasets}"
+RESULTS_DIR="${RESULTS_DIR:-$REPO_ROOT/pilot_results}"
+
+DEFAULT_BASE_MODEL="${DEFAULT_BASE_MODEL:-$MODELS_DIR/Llama-3.2-1B-Instruct}"
+DEFAULT_CODI_CKPT="${DEFAULT_CODI_CKPT:-$MODELS_DIR/CODI-llama3.2-1b-Instruct/pytorch_model.bin}"
+DEFAULT_CODI_DIR="${DEFAULT_CODI_DIR:-$MODELS_DIR/CODI-llama3.2-1b-Instruct}"
+DEFAULT_GSM8K_TRAIN="${DEFAULT_GSM8K_TRAIN:-$DATA_DIR/gsm8k/main/train-00000-of-00001.parquet}"
+DEFAULT_GSM8K_TEST="${DEFAULT_GSM8K_TEST:-$DATA_DIR/gsm8k/main/test-00000-of-00001.parquet}"
+DEFAULT_SELECTOR_SUMMARY="${DEFAULT_SELECTOR_SUMMARY:-$RESULTS_DIR/round2_selected_neg_llama1b_gpu4/summary.json}"
