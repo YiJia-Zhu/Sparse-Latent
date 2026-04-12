@@ -76,46 +76,64 @@ if [[ -n "$RESTORE_PATH" ]]; then
   EXTRA_DATA_ARGS+=(--restore_from "$RESTORE_PATH")
 fi
 
-python train.py \
-  --output_dir "$SAVE_DIR" \
-  --expt_name "$EXPT_NAME" \
-  --logging_dir "$LOGGING_DIR" \
-  --logging_steps "$LOGGING_STEPS" \
-  --model_name_or_path "$MODEL_PATH" \
-  --data_name "$DATA_NAME" \
-  --seed "$SEED" \
-  --model_max_length "$MODEL_MAX_LENGTH" \
-  --per_device_train_batch_size "$PER_DEVICE_BATCH_SIZE" \
-  --gradient_accumulation_steps "$GRAD_ACCUM" \
-  --bf16 \
-  --num_train_epochs "$NUM_EPOCHS" \
-  --learning_rate "$LEARNING_RATE" \
-  --max_grad_norm 2.0 \
-  --use_lora True \
-  --lora_r 128 --lora_alpha 32 --lora_init \
-  --save_strategy "$SAVE_STRATEGY" \
-  --save_steps "$SAVE_STEPS" \
-  --save_total_limit "$SAVE_TOTAL_LIMIT" \
-  --save_safetensors "$SAVE_SAFETENSORS" \
-  --weight_decay 0.1 \
-  --warmup_ratio 0.03 \
-  --lr_scheduler_type "cosine" \
-  --do_train \
-  --report_to "$REPORT_TO" \
-  --num_latent "$NUM_LATENT" \
-  --logging_strategy "steps" \
-  --use_prj True \
-  --prj_dim 2048 \
-  --prj_dropout 0.0 \
-  --distill_loss_div_std True \
-  --remove_eos True \
-  --distill_loss_factor "$DISTILL_LOSS_FACTOR" \
-  --print_ref_model_stats True \
-  --max_token_num "$MAX_TOKEN_NUM" \
-  --ref_loss_factor "$REF_LOSS_FACTOR" \
-  --exp_mode "$EXP_MODE" \
-  --exp_data_num "$EXP_DATA_NUM" \
-  --print_loss "$PRINT_LOSS" \
-  --selective_align_path "$SELECTOR_PATH" \
-  --selective_align_set "$SELECTOR_SET" \
+TRAIN_ARGS=(
+  --output_dir "$SAVE_DIR"
+  --expt_name "$EXPT_NAME"
+  --logging_dir "$LOGGING_DIR"
+  --logging_steps "$LOGGING_STEPS"
+  --model_name_or_path "$MODEL_PATH"
+  --data_name "$DATA_NAME"
+  --seed "$SEED"
+  --model_max_length "$MODEL_MAX_LENGTH"
+  --per_device_train_batch_size "$PER_DEVICE_BATCH_SIZE"
+  --gradient_accumulation_steps "$GRAD_ACCUM"
+  --bf16
+  --num_train_epochs "$NUM_EPOCHS"
+  --learning_rate "$LEARNING_RATE"
+  --max_grad_norm 2.0
+  --use_lora True
+  --lora_r 128 --lora_alpha 32 --lora_init
+  --save_strategy "$SAVE_STRATEGY"
+  --save_steps "$SAVE_STEPS"
+  --save_total_limit "$SAVE_TOTAL_LIMIT"
+  --save_safetensors "$SAVE_SAFETENSORS"
+  --weight_decay 0.1
+  --warmup_ratio 0.03
+  --lr_scheduler_type "cosine"
+  --do_train
+  --report_to "$REPORT_TO"
+  --num_latent "$NUM_LATENT"
+  --logging_strategy "steps"
+  --use_prj True
+  --prj_dim 2048
+  --prj_dropout 0.0
+  --distill_loss_div_std True
+  --remove_eos True
+  --distill_loss_factor "$DISTILL_LOSS_FACTOR"
+  --print_ref_model_stats True
+  --max_token_num "$MAX_TOKEN_NUM"
+  --ref_loss_factor "$REF_LOSS_FACTOR"
+  --exp_mode "$EXP_MODE"
+  --exp_data_num "$EXP_DATA_NUM"
+  --print_loss "$PRINT_LOSS"
+  --selective_align_path "$SELECTOR_PATH"
+  --selective_align_set "$SELECTOR_SET"
   "${EXTRA_DATA_ARGS[@]}"
+)
+
+IFS=',' read -r -a CUDA_DEVICE_ARRAY <<< "$CUDA_VISIBLE_DEVICES"
+NUM_PROCS="${#CUDA_DEVICE_ARRAY[@]}"
+
+if [[ "$NUM_PROCS" -gt 1 ]]; then
+  MASTER_PORT="${MASTER_PORT:-29500}"
+  echo "[Official Sparse CODI] launch_mode=torchrun nproc=$NUM_PROCS master_port=$MASTER_PORT"
+  torchrun \
+    --nproc_per_node="$NUM_PROCS" \
+    --master_port "$MASTER_PORT" \
+    train.py \
+    "${TRAIN_ARGS[@]}" \
+    --ddp_find_unused_parameters False
+else
+  echo "[Official Sparse CODI] launch_mode=python nproc=1"
+  python train.py "${TRAIN_ARGS[@]}"
+fi
