@@ -25,7 +25,15 @@ SELECTOR_SET="${SELECTOR_SET:-selected_neg}"
 
 EXPT_NAME="${EXPT_NAME:-gsm8k_llama1b_sparse_codi_official}"
 DATA_NAME="${DATA_NAME:-icot}"
-LOCAL_DATA_PATH="${LOCAL_DATA_PATH:-}"
+if [[ -v LOCAL_DATA_PATH ]]; then
+  LOCAL_DATA_PATH="${LOCAL_DATA_PATH}"
+elif [[ "$DATA_NAME" == *full* ]]; then
+  LOCAL_DATA_PATH="$DEFAULT_GSM8K_AUG_NL_TRAIN"
+elif [[ "$DATA_NAME" == icot* ]]; then
+  LOCAL_DATA_PATH="$DEFAULT_GSM8K_AUG_TRAIN"
+else
+  LOCAL_DATA_PATH=""
+fi
 
 PER_DEVICE_BATCH_SIZE="${PER_DEVICE_BATCH_SIZE:-32}"
 GRAD_ACCUM="${GRAD_ACCUM:-4}"

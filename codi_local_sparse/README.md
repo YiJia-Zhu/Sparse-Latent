@@ -23,7 +23,7 @@ Default assets:
 
 - base model: `huggingface_models/Llama-3.2-1B-Instruct`
 - pretrained CODI: `huggingface_models/CODI-llama3.2-1b-Instruct`
-- train dataset default: `load_dataset("zen-E/GSM8k-Aug")`
+- train dataset default: local json mirror under `huggingface_datasets/zen-E__GSM8k-Aug/gsm8k_aug_train.json`
 - optional local mirrors:
   `huggingface_datasets/zen-E__GSM8k-Aug/gsm8k_aug_train.json`
   `huggingface_datasets/zen-E__GSM8k-Aug/gsm8k_test.json`
@@ -35,6 +35,7 @@ Training semantics used in this local copy:
 - `pretrained CODI` is a comparison baseline and is evaluated directly from `huggingface_models/CODI-llama3.2-1b-Instruct`
 - `full_state / sparse_no_neg / sparse_neg` are training runs that start from the plain base LLaMA checkpoint by default
 - `restore_from` is reserved for explicit resume / warm-start requests and is not enabled by default in the launchers
+- training launchers now default to local json data if available; explicit empty `LOCAL_DATA_PATH` falls back to `load_dataset(...)`
 
 Environment:
 
