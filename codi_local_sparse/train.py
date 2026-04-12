@@ -446,12 +446,26 @@ def train():
         if not path.exists():
             raise FileNotFoundError(f"Local training data not found: {path}")
 
+        def normalize_records(obj):
+            if isinstance(obj, list):
+                return obj
+            if isinstance(obj, dict):
+                if "data" in obj and isinstance(obj["data"], list):
+                    return obj["data"]
+                if obj and all(isinstance(v, list) for v in obj.values()):
+                    lengths = {len(v) for v in obj.values()}
+                    if len(lengths) != 1:
+                        raise ValueError(f"Columnar json has inconsistent lengths: {lengths}")
+                    size = next(iter(lengths), 0)
+                    return [{key: value[idx] for key, value in obj.items()} for idx in range(size)]
+            raise ValueError(f"Unsupported local json structure at {path}")
+
         if path.suffix == ".parquet":
             records = pd.read_parquet(path).to_dict(orient="records")
         elif path.suffix == ".json":
-            records = json.loads(path.read_text())
+            records = normalize_records(json.loads(path.read_text()))
         elif path.suffix == ".jsonl":
-            records = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+            records = normalize_records([json.loads(line) for line in path.read_text().splitlines() if line.strip()])
         else:
             raise ValueError(f"Unsupported local data suffix: {path.suffix}")
 

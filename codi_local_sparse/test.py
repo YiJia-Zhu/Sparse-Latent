@@ -16,6 +16,7 @@ import logging
 import math
 import re
 import os
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Sequence
 
@@ -162,8 +163,20 @@ def evaluation(model_args, data_args, training_args):
     question_name = "question"
     answer_name = "answer"
     if data_args.local_data_path and data_args.data_name in {"gsm8k-local", "gsm8k"}:
-        test_frame = pd.read_parquet(data_args.local_data_path)
-        test_set = test_frame.to_dict(orient="records")
+        local_path = Path(data_args.local_data_path)
+        if local_path.suffix == ".parquet":
+            test_set = pd.read_parquet(local_path).to_dict(orient="records")
+        elif local_path.suffix == ".json":
+            obj = json.loads(local_path.read_text())
+            if isinstance(obj, dict) and obj and all(isinstance(v, list) for v in obj.values()):
+                size = len(next(iter(obj.values())))
+                test_set = [{key: value[idx] for key, value in obj.items()} for idx in range(size)]
+            elif isinstance(obj, list):
+                test_set = obj
+            else:
+                raise ValueError(f"Unsupported local json structure: {local_path}")
+        else:
+            raise ValueError(f"Unsupported local eval file: {local_path}")
     elif "gsm-hard" == data_args.data_name:
         dataset = load_dataset("juyoung-trl/gsm-hard")
         test_set = dataset['train']

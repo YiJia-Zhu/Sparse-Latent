@@ -56,11 +56,24 @@ def build_lora_config(model_name_or_path: str, lora_r: int, lora_alpha: int) -> 
 
 
 def load_examples(local_data_path: Path, max_samples: int | None) -> List[Dict[str, object]]:
-    df = pd.read_parquet(local_data_path)
+    if local_data_path.suffix == ".parquet":
+        records = pd.read_parquet(local_data_path).to_dict(orient="records")
+    elif local_data_path.suffix == ".json":
+        obj = json.loads(local_data_path.read_text())
+        if isinstance(obj, dict) and obj and all(isinstance(v, list) for v in obj.values()):
+            size = len(next(iter(obj.values())))
+            records = [{key: value[idx] for key, value in obj.items()} for idx in range(size)]
+        elif isinstance(obj, list):
+            records = obj
+        else:
+            raise ValueError(f"Unsupported json structure: {local_data_path}")
+    else:
+        raise ValueError(f"Unsupported local eval file: {local_data_path}")
+
     if max_samples is not None and max_samples > 0:
-        df = df.iloc[:max_samples]
+        records = records[:max_samples]
     rows: List[Dict[str, object]] = []
-    for record in df.to_dict(orient="records"):
+    for record in records:
         answer_text = str(record["answer"])
         final_answer = answer_text.split("####")[-1].strip()
         try:
