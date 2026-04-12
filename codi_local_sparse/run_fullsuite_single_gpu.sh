@@ -70,6 +70,31 @@ run_plain_llama_eval() {
     --device cuda 2>&1 | tee "$SUITE_ROOT/logs/plain_llama_eval.log"
 }
 
+run_pretrained_codi_eval() {
+  local out_dir="$SUITE_ROOT/evals/pretrained_codi"
+  echo "[suite] pretrained codi eval -> $out_dir" | tee -a "$SUITE_ROOT/logs/suite.log"
+  CUDA_VISIBLE_DEVICES="$GPU_ID" python evaluate_local_codi_teststyle.py \
+    --model-path "$MODEL_PATH" \
+    --ckpt-dir "$DEFAULT_CODI_DIR" \
+    --local-test-path "$LOCAL_TEST_PATH" \
+    --output-dir "$out_dir" \
+    --batch-size 128 \
+    --max-samples 0 \
+    --max-new-tokens 256 \
+    --model-max-length 512 \
+    --num-latent 6 \
+    --inf-latent-iterations 6 \
+    --inf-num-iterations 1 \
+    --lora-r 128 \
+    --lora-alpha 32 \
+    --prj-dim 2048 \
+    --use-prj \
+    --greedy \
+    --remove-eos \
+    --device cuda \
+    --seed 11 2>&1 | tee "$SUITE_ROOT/logs/pretrained_codi_eval.log"
+}
+
 run_one_method() {
   local tag="$1"
   local selector_path="$2"
@@ -84,7 +109,7 @@ run_one_method() {
   CUDA_VISIBLE_DEVICES="$GPU_ID" \
   EXPT_NAME="$expt_name" \
   MODEL_PATH="$MODEL_PATH" \
-  RESTORE_PATH="$RESTORE_PATH" \
+  RESTORE_PATH="" \
   LOCAL_DATA_PATH="$LOCAL_TRAIN_PATH" \
   SELECTOR_PATH="$selector_path" \
   SELECTOR_SET="$selector_set" \
@@ -147,6 +172,16 @@ if plain_path.exists():
         "eval_summary": str(plain_path),
     })
 
+pretrained_codi_path = suite_root / "evals" / "pretrained_codi" / "eval_summary.json"
+if pretrained_codi_path.exists():
+    data = json.loads(pretrained_codi_path.read_text())
+    rows.append({
+        "method": "pretrained_codi",
+        "accuracy": data.get("average_accuracy"),
+        "mean_generated_tokens": data.get("average_mean_generated_tokens"),
+        "eval_summary": str(pretrained_codi_path),
+    })
+
 for method in ["full_state", "sparse_no_neg", "sparse_neg"]:
     path = suite_root / "evals" / method / "eval_summary.json"
     if not path.exists():
@@ -171,6 +206,7 @@ PY
 }
 
 run_plain_llama_eval
+run_pretrained_codi_eval
 run_one_method "full_state" "" "selected_neg"
 run_one_method "sparse_no_neg" "$SELECTOR_SUMMARY" "selected_no_neg"
 run_one_method "sparse_neg" "$SELECTOR_SUMMARY" "selected_neg"
