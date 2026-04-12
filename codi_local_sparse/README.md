@@ -25,8 +25,9 @@ Default assets:
 - pretrained CODI: `huggingface_models/CODI-llama3.2-1b-Instruct`
 - train dataset default: `load_dataset("zen-E/GSM8k-Aug")`
 - optional local mirrors:
-  `huggingface_datasets/zen-E__GSM8k-Aug/train-00000-of-00001.parquet`
-  `huggingface_datasets/zen-E__GSM8k-Aug-NL/train-00000-of-00001.parquet`
+  `huggingface_datasets/zen-E__GSM8k-Aug/gsm8k_aug_train.json`
+  `huggingface_datasets/zen-E__GSM8k-Aug/gsm8k_test.json`
+  `huggingface_datasets/zen-E__GSM8k-Aug-NL/gsm8k_aug_nl.json`
 - GSM8K test: `huggingface_datasets/gsm8k/main/test-00000-of-00001.parquet`
 
 Training semantics used in this local copy:
