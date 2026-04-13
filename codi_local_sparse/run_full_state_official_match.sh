@@ -24,12 +24,25 @@ SAVE_STRATEGY="${SAVE_STRATEGY:-steps}"
 SAVE_STEPS="${SAVE_STEPS:-200}"
 SAVE_TOTAL_LIMIT="${SAVE_TOTAL_LIMIT:-10}"
 SAVE_SAFETENSORS="${SAVE_SAFETENSORS:-False}"
+LEARNING_RATE="${LEARNING_RATE:-8e-4}"
+EVAL_MAX_SAMPLES="${EVAL_MAX_SAMPLES:-0}"
+
+CKPT_LR="$(LEARNING_RATE="$LEARNING_RATE" python - <<'PY'
+from decimal import Decimal
+import os
+
+value = format(Decimal(os.environ["LEARNING_RATE"]), "f")
+if "." in value:
+    value = value.rstrip("0").rstrip(".")
+print(value)
+PY
+)"
 
 mkdir -p "$RUN_ROOT"/{logs,eval,tensorboard,plots}
 
 EXPT_NAME="${RUN_NAME}"
 LOGGING_DIR="$RUN_ROOT/tensorboard"
-CKPT_DIR="$ROOT_DIR/ckpts_official_sparse/$EXPT_NAME/Llama-3.2-1B-Instruct/ep_${NUM_EPOCHS}/lr_0.0008/seed_${SEED}"
+CKPT_DIR="$ROOT_DIR/ckpts_official_sparse/$EXPT_NAME/Llama-3.2-1B-Instruct/ep_${NUM_EPOCHS}/lr_${CKPT_LR}/seed_${SEED}"
 
 echo "[run] method=full_state gpu=$GPU_ID run_root=$RUN_ROOT" | tee "$RUN_ROOT/logs/run.log"
 
@@ -47,7 +60,7 @@ NUM_EPOCHS="$NUM_EPOCHS" \
 SEED="$SEED" \
 PER_DEVICE_BATCH_SIZE="$PER_DEVICE_BATCH_SIZE" \
 GRAD_ACCUM="$GRAD_ACCUM" \
-LEARNING_RATE="8e-4" \
+LEARNING_RATE="$LEARNING_RATE" \
 NUM_LATENT="6" \
 MODEL_MAX_LENGTH="512" \
 MAX_TOKEN_NUM="200" \
@@ -68,7 +81,7 @@ CUDA_VISIBLE_DEVICES="$GPU_ID" python evaluate_local_codi_teststyle.py \
   --local-test-path "$LOCAL_TEST_PATH" \
   --output-dir "$RUN_ROOT/eval" \
   --batch-size 128 \
-  --max-samples 0 \
+  --max-samples "$EVAL_MAX_SAMPLES" \
   --max-new-tokens 256 \
   --model-max-length 512 \
   --num-latent 6 \

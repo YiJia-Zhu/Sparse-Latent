@@ -8,16 +8,19 @@ source "$ROOT_DIR/env.sh"
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate "$CONDA_ENV_NAME"
 
-GPU_ID="${GPU_ID:-7}"
+METHOD="${METHOD:-sparse_neg}"
 TIMESTAMP="${TIMESTAMP:-$(date +%Y%m%d_%H%M%S)}"
-RUN_NAME="${RUN_NAME:-sparse_neg_official_match_${TIMESTAMP}}"
+RUN_NAME="${RUN_NAME:-${METHOD}_refine_from_full_${TIMESTAMP}}"
 RUN_ROOT="${RUN_ROOT:-$RESULTS_DIR/$RUN_NAME}"
 
 MODEL_PATH="${MODEL_PATH:-$DEFAULT_BASE_MODEL}"
 LOCAL_TEST_PATH="${LOCAL_TEST_PATH:-$DEFAULT_GSM8K_TEST}"
 LOCAL_TRAIN_PATH="${LOCAL_TRAIN_PATH:-$DEFAULT_GSM8K_AUG_TRAIN}"
 SELECTOR_SUMMARY="${SELECTOR_SUMMARY:-$DEFAULT_SELECTOR_SUMMARY}"
-NUM_EPOCHS="${NUM_EPOCHS:-3}"
+RESTORE_PATH="${RESTORE_PATH:-$ROOT_DIR/ckpts_official_sparse/full_state_official_match_20260413_000931/Llama-3.2-1B-Instruct/ep_3/lr_0.0008/seed_11/pytorch_model.bin}"
+CUDA_DEVICES="${CUDA_VISIBLE_DEVICES:-2}"
+MASTER_PORT="${MASTER_PORT:-$((29500 + (${SEED:-11} % 100) + (${NUM_EPOCHS:-1} * 10)))}"
+NUM_EPOCHS="${NUM_EPOCHS:-1}"
 SEED="${SEED:-11}"
 PER_DEVICE_BATCH_SIZE="${PER_DEVICE_BATCH_SIZE:-16}"
 GRAD_ACCUM="${GRAD_ACCUM:-8}"
@@ -25,8 +28,37 @@ SAVE_STRATEGY="${SAVE_STRATEGY:-steps}"
 SAVE_STEPS="${SAVE_STEPS:-200}"
 SAVE_TOTAL_LIMIT="${SAVE_TOTAL_LIMIT:-10}"
 SAVE_SAFETENSORS="${SAVE_SAFETENSORS:-False}"
-LEARNING_RATE="${LEARNING_RATE:-8e-4}"
+EXP_MODE="${EXP_MODE:-False}"
+EXP_DATA_NUM="${EXP_DATA_NUM:-200}"
 EVAL_MAX_SAMPLES="${EVAL_MAX_SAMPLES:-0}"
+LEARNING_RATE="${LEARNING_RATE:-8e-4}"
+SELECTOR_SET_OVERRIDE="${SELECTOR_SET_OVERRIDE:-}"
+
+case "$METHOD" in
+  full_state)
+    SELECTOR_PATH=""
+    SELECTOR_SET="selected_neg"
+    TITLE="full_state_refine"
+    ;;
+  sparse_no_neg)
+    SELECTOR_PATH="$SELECTOR_SUMMARY"
+    SELECTOR_SET="selected_no_neg"
+    TITLE="sparse_no_neg_refine"
+    ;;
+  sparse_neg)
+    SELECTOR_PATH="$SELECTOR_SUMMARY"
+    SELECTOR_SET="selected_neg"
+    TITLE="sparse_neg_refine"
+    ;;
+  *)
+    echo "Unsupported METHOD=$METHOD. Expected one of: full_state, sparse_no_neg, sparse_neg" >&2
+    exit 1
+    ;;
+esac
+
+if [[ -n "$SELECTOR_SET_OVERRIDE" ]]; then
+  SELECTOR_SET="$SELECTOR_SET_OVERRIDE"
+fi
 
 CKPT_LR="$(LEARNING_RATE="$LEARNING_RATE" python - <<'PY'
 from decimal import Decimal
@@ -41,19 +73,20 @@ PY
 
 mkdir -p "$RUN_ROOT"/{logs,eval,tensorboard,plots}
 
-EXPT_NAME="${RUN_NAME}"
+EXPT_NAME="$RUN_NAME"
 LOGGING_DIR="$RUN_ROOT/tensorboard"
 CKPT_DIR="$ROOT_DIR/ckpts_official_sparse/$EXPT_NAME/Llama-3.2-1B-Instruct/ep_${NUM_EPOCHS}/lr_${CKPT_LR}/seed_${SEED}"
 
-echo "[run] method=sparse_neg gpu=$GPU_ID run_root=$RUN_ROOT" | tee "$RUN_ROOT/logs/run.log"
+echo "[run] method=$METHOD cuda=$CUDA_DEVICES restore=$RESTORE_PATH run_root=$RUN_ROOT" | tee "$RUN_ROOT/logs/run.log"
 
-CUDA_VISIBLE_DEVICES="$GPU_ID" \
+CUDA_VISIBLE_DEVICES="$CUDA_DEVICES" \
+MASTER_PORT="$MASTER_PORT" \
 EXPT_NAME="$EXPT_NAME" \
 MODEL_PATH="$MODEL_PATH" \
-RESTORE_PATH="" \
+RESTORE_PATH="$RESTORE_PATH" \
 LOCAL_DATA_PATH="$LOCAL_TRAIN_PATH" \
-SELECTOR_PATH="$SELECTOR_SUMMARY" \
-SELECTOR_SET="selected_neg" \
+SELECTOR_PATH="$SELECTOR_PATH" \
+SELECTOR_SET="$SELECTOR_SET" \
 LOGGING_DIR="$LOGGING_DIR" \
 REPORT_TO="tensorboard" \
 PRINT_LOSS="False" \
@@ -67,8 +100,8 @@ MODEL_MAX_LENGTH="512" \
 MAX_TOKEN_NUM="200" \
 DISTILL_LOSS_FACTOR="20" \
 REF_LOSS_FACTOR="1.0" \
-EXP_MODE="False" \
-EXP_DATA_NUM="200" \
+EXP_MODE="$EXP_MODE" \
+EXP_DATA_NUM="$EXP_DATA_NUM" \
 SAVE_STRATEGY="$SAVE_STRATEGY" \
 SAVE_STEPS="$SAVE_STEPS" \
 SAVE_TOTAL_LIMIT="$SAVE_TOTAL_LIMIT" \
@@ -76,7 +109,7 @@ SAVE_SAFETENSORS="$SAVE_SAFETENSORS" \
 LOGGING_STEPS="10" \
 bash "$ROOT_DIR/run_sparse_codi_official.sh" 2>&1 | tee "$RUN_ROOT/logs/train.log"
 
-CUDA_VISIBLE_DEVICES="$GPU_ID" python evaluate_local_codi_teststyle.py \
+CUDA_VISIBLE_DEVICES="${CUDA_DEVICES%%,*}" python evaluate_local_codi_teststyle.py \
   --model-path "$MODEL_PATH" \
   --ckpt-dir "$CKPT_DIR" \
   --local-test-path "$LOCAL_TEST_PATH" \
@@ -101,6 +134,6 @@ CUDA_VISIBLE_DEVICES="" python export_tensorboard_loss_plot.py \
   --event-dir "$LOGGING_DIR" \
   --trainer-state "$CKPT_DIR/trainer_state.json" \
   --output-path "$RUN_ROOT/plots/loss.png" \
-  --title "sparse_neg training loss" 2>&1 | tee "$RUN_ROOT/logs/plot.log"
+  --title "$TITLE training loss" 2>&1 | tee "$RUN_ROOT/logs/plot.log"
 
 echo "[run] done" | tee -a "$RUN_ROOT/logs/run.log"

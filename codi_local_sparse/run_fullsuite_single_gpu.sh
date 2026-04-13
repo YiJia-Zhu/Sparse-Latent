@@ -205,11 +205,11 @@ for row in rows:
 PY
 }
 
-run_plain_llama_eval
+# run_plain_llama_eval
 run_pretrained_codi_eval
-run_one_method "full_state" "" "selected_neg"
-run_one_method "sparse_no_neg" "$SELECTOR_SUMMARY" "selected_no_neg"
-run_one_method "sparse_neg" "$SELECTOR_SUMMARY" "selected_neg"
-write_summary
+# run_one_method "full_state" "" "selected_neg"
+# run_one_method "sparse_no_neg" "$SELECTOR_SUMMARY" "selected_no_neg"
+# run_one_method "sparse_neg" "$SELECTOR_SUMMARY" "selected_neg"
+# write_summary
 
 echo "[suite] done" | tee -a "$SUITE_ROOT/logs/suite.log"
